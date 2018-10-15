@@ -10,14 +10,15 @@ ES6의 클래스는 기존 프로토타입 기반 객체지향 프로그래밍�
 ```javascript
 class Member {
 // ...
-}
+};
 ```
 
 ## 생성
 ```javascript
 class Member {
 // ...
-}
+};
+
 let object = new Member();
 ```
 
@@ -27,7 +28,8 @@ class Member {
     constructor(name) {
         this.name = name;
     }
-}
+};
+
 let object = new Member("Kim");
 ```
 
@@ -43,7 +45,8 @@ class Member {
     get getName() {
         return name;
     }
-}
+};
+
 let object = new Member("Kim");
 ```
 
