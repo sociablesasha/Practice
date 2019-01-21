@@ -12,168 +12,133 @@
 
 
 ## Code
+### pom.xml
+```xml
+<dependency>
+    <groupId>com.querydsl</groupId>
+    <artifactId>querydsl-core</artifactId>
+</dependency>
+
+<dependency>
+    <groupId>com.querydsl</groupId>
+    <artifactId>querydsl-apt</artifactId>
+</dependency>
+
+<dependency>
+    <groupId>com.querydsl</groupId>
+    <artifactId>querydsl-jpa</artifactId>
+</dependency>
+
+<plugin>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-maven-plugin</artifactId>
+</plugin>
+
+<plugin>
+    <groupId>com.mysema.maven</groupId>
+    <artifactId>apt-maven-plugin</artifactId>
+    <executions>
+        <execution>
+            <goals>         
+                <goal>process</goal>
+            </goals>
+            <configuration>
+                <outputDirectory>target/generated-sources/java</outputDirectory>
+                <processor>com.mysema.query.apt.jpa.JPAAnnotationProcessor</processor>
+            </configuration>
+        </execution>
+    </executions>
+</plugin>
+```
+
+### Entity (Student)
 ```java
-@Slf4j
-@RunWith(SpringRunner.class)
-@SpringBootTest
-public class NPlusOneProblem {    
- 
-    @Autowired
-    private OrderRepository orderRepository;
- 
-    @PersistenceContext
-    private EntityManager em;
-   
- 
-    private void makeTestData() {
- 
-        int orderProductId = 0;
-        for (int i = 0; i < 10; i++) {
-            Shipping shipping = new Shipping();
-            shipping.setId(i);
- 
-            Order order = new Order();
-            order.setId(i);
-            order.setShipping(shipping);
- 
-            for (int j = 0; j < 5; j++) {
-                OrderProduct orderProduct = new OrderProduct();
-                orderProduct.setId(orderProductId);
-                orderProduct.setOrder(order);
-                orderProductId++;
-            }
- 
-            em.persist(order);
-        }
- 
-        em.flush();
-        em.clear();
-    }
-    
-    
-    @Test
-    @Transactional
-    public void OneToOne쿼리_fetch적용하지않음() {
-        makeTestData();
- 
-        TypedQuery typedQuery = em.createQuery("select o from Order o left join o.shipping", Order.class);
-        List<Order> orderList = typedQuery.getResultList();
-        assertThat(10, is(orderList.size()));
- 
-        Order order = em.find(Order.class, 8);
-        assertNotNull(order);
-    }
- 
-    @Test
-    @Transactional
-    public void OneToOne쿼리_fetch적용() {
-        makeTestData();
- 
-        TypedQuery typedQuery = em.createQuery("select o from Order o left join fetch o.shipping", Order.class);
-        List<Order> orderList = typedQuery.getResultList();
-        assertThat(10, is(orderList.size()));
- 
-        Order order = em.find(Order.class, 8);
-        assertNotNull(order);
-    }
- 
-    /**
-     * Order 테이블에 데이터 10개
-     * OrderProducts 테이블에 데이터 5개
-     * 위의 두 개의 테이블을 서로 조인하면 50개가 나온다.
-     */
-    @Test
-    @Transactional
-    public void fetch적용시_데이터가_중복노출되는현상() {
-        makeTestData();
- 
-        TypedQuery typedQuery = em.createQuery("select o from Order o left join fetch o.orderProducts", Order.class);
-        System.out.println("--------------------------------------------");
-        List<Order> orderList = typedQuery.getResultList();
-        System.out.println("--------------------------------------------");
- 
-        assertThat(10, is(not(orderList.size())));
-        assertThat(50, is(orderList.size()));
-    }
- 
-    @Test
-    @Transactional
-    public void fetch적용시_데이터가_중복노출되는현상_distinct로_해결하기() {
-        makeTestData();
- 
-        TypedQuery typedQuery = em.createQuery("select distinct o from Order o join fetch o.orderProducts", Order.class);
-        System.out.println("--------------------------------------------");
-        List<Order> orderList = typedQuery.getResultList();
-        System.out.println("--------------------------------------------");
- 
-        assertThat(10, is(orderList.size()));
-    }
-}
- 
-interface OrderRepository extends JpaRepository<Order, Integer> {
-}
- 
- 
+@Entity
 @Getter
 @Setter
-@NoArgsConstructor
-@lombok.ToString
-@Entity
-@Table(name = "NPLUS_ORDER")
-class Order {
+@ToString
+@Table(name = "Student")
+public class Student {
+
     @Id
-    private int id;
- 
-    @OneToOne(fetch = FetchType.LAZY, mappedBy = "order", cascade = CascadeType.PERSIST, optional = false)
-    private Shipping shipping;
- 
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "order", cascade = CascadeType.PERSIST)
-    private List<OrderProduct> orderProducts = new ArrayList<>();
- 
-    public void setShipping(Shipping shipping) {
-        this.shipping = shipping;
-        shipping.setOrder(this);
-    }
- 
-    public void addOrderProducts(OrderProduct orderProduct) {
-        orderProducts.add(orderProduct);
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private Long id;
+
+    private String name;
+
+    @ManyToOne
+    private Teacher teacher;
+
+    public Student() {}
+
+    @Builder
+    public Student(String name, Teacher teacher) {
+        this.name = name;
+        this.teacher = teacher;
     }
 }
- 
- 
+```
+
+### Entity (Teacher)
+```java
+@Entity
 @Getter
 @Setter
-@NoArgsConstructor
-@lombok.ToString(exclude = "order")
-@Entity
-@Table(name = "NPLUS_SHIPPING")
-class Shipping {
- 
+@ToString(exclude = "students")
+@Table(name = "Teacher")
+public class Teacher {
+
     @Id
-    private int id;
- 
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    private Order order;
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private Long id;
+
+    private String name;
+
+    @OneToMany(mappedBy = "teacher")
+    private List<Student> students;
+
+    public Teacher() {}
+
+    @Builder
+    public Teacher(String name, List<Student> students) {
+        this.name = name;
+        this.students = students;
+    }
+
 }
- 
- 
-@Getter
-@Setter
-@NoArgsConstructor
-@lombok.ToString(exclude = "order")
-@Entity
-@Table(name = "NPLUS_ORDER_PRODUCT")
-class OrderProduct {
- 
-    @Id
-    private int id;
- 
-    @ManyToOne(fetch = FetchType.LAZY)
-    private Order order;
- 
-    public void setOrder(Order order) {
-        this.order = order;
-        order.addOrderProducts(this);
+```
+
+### TeacherRepositoryCustom
+```java
+public interface RepositoryCustom {
+    List<Teacher>  getTeachers();
+}
+```
+
+### TeacherRepository
+```java
+public interface Repository extends JpaRepository<Teacher, Long>, RepositoryCustom { }
+```
+
+### RepositoryImpl
+```java
+public class RepositoryImpl extends QuerydslRepositorySupport implements  RepositoryCustom {
+
+    public RepositoryImpl() {
+        super(Teacher.class);
+    }
+
+    @Override
+    public List<Teacher> getTeachers() {
+        QTeacher teacher = QTeacher.Teacher;
+        QStudent student = QStudent.Student;
+
+        return from(teacher)
+                .leftJoin(teacher.students, student)
+                .fetchJoin()
+                .distinct()
+                .fetch();
+
     }
 }
 ```
